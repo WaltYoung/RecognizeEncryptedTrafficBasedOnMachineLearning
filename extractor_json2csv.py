@@ -5,6 +5,8 @@ __author__ = 'Xiao'
 
 import ijson
 
+MAX_PACKETLEN = 30
+
 dictionary = {
     '52pojie': 'www.52pojie.cn',
     'cnki': 'www.cnki.net',
@@ -24,7 +26,7 @@ pcap_file_path = target + '.pcap'
 json_file_path = target + '.json'
 
 
-class stream:
+class Stream:
     def __init__(self, tcp_stream, sni, length):
         self.tcp_stream = tcp_stream
         self.sni = sni
@@ -33,13 +35,6 @@ class stream:
 
 # 创建类的实例数组
 streams = []
-
-
-def findIndex(value):
-    for stream in streams:
-        if stream.tcp_stream == value:
-            return True
-    return False
 
 
 def insertSNI(cur_tcp_stream, value):
@@ -89,8 +84,8 @@ if __name__ == '__main__':
             if 'tcp.stream' in prefix:
                 if 'tcp:tls' in cur_frame_protocols:
                     cur_tcp_stream = value
-                    if not findIndex(value):
-                        streams.append(stream(value, None, None))
+                    if all(stream.tcp_stream != value for stream in streams): # 检查避免重复添加
+                        streams.append(Stream(value, None, None))
 
             if 'tls.handshake.extensions_server_name' in prefix:
                 if 'tcp:tls' in cur_frame_protocols:
@@ -102,14 +97,13 @@ if __name__ == '__main__':
                     length = str(value).count(':') + 1
                     appendLength(cur_tcp_stream, str(length))
 
-        max_packetlen = 30
         for stream in streams:
             count = str(stream.tcp_length).count(',') + 1
-            if count < max_packetlen:
-                for i in range(max_packetlen - count):
+            if count < MAX_PACKETLEN:
+                for i in range(MAX_PACKETLEN - count):
                     appendLength(stream.tcp_stream, '0')
-            elif count > max_packetlen:
-                removeLength(stream.tcp_stream, stream.tcp_length, max_packetlen)
+            elif count > MAX_PACKETLEN:
+                removeLength(stream.tcp_stream, stream.tcp_length, MAX_PACKETLEN)
 
     with open('dataset.csv', 'a', encoding='utf-8', newline='') as csv_file:
         for stream in streams:
