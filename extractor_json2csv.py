@@ -84,7 +84,7 @@ if __name__ == '__main__':
             if 'tcp.stream' in prefix:
                 if 'tcp:tls' in cur_frame_protocols:
                     cur_tcp_stream = value
-                    if all(stream.tcp_stream != value for stream in streams): # 检查避免重复添加
+                    if all(stream.tcp_stream != value for stream in streams): # 检查是否存在以value为key的stream
                         streams.append(Stream(value, None, None))
 
             if 'tls.handshake.extensions_server_name' in prefix:
