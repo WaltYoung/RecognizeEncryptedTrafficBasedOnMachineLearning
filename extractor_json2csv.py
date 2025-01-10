@@ -72,51 +72,47 @@ def removeLength(cur_tcp_stream, input_string, max_packetlen):
             stream.tcp_length = input_string[:index]
 
 
-# 读取JSON数据文件
-with open(json_file_path, 'rb') as f:
-    # 使用ijson.parse方法解析JSON数据
-    data = ijson.parse(f)
+if __name__ == '__main__':
+    # 读取JSON数据文件
+    with open(json_file_path, 'rb') as f:
+        # 使用ijson.parse方法解析JSON数据
+        data = ijson.parse(f)
 
-    # 初始化变量用于存储提取的字段值
-    tcp_stream_list = []
-    sni_list = []
-    tcp_payload_list = []
+        # 遍历解析出的数据
+        cur_tcp_stream = '0'
+        cur_frame_protocols = ''
+        for prefix, event, value in data:
+            # 检查特定字段的前缀并提取数据
+            if 'frame.protocols' in prefix:
+                cur_frame_protocols = value
 
-    # 遍历解析出的数据
-    cur_tcp_stream = '0'
-    cur_frame_protocols = ''
-    for prefix, event, value in data:
-        # 检查特定字段的前缀并提取数据
-        if 'frame.protocols' in prefix:
-            cur_frame_protocols = value
+            if 'tcp.stream' in prefix:
+                if 'tcp:tls' in cur_frame_protocols:
+                    cur_tcp_stream = value
+                    if not findIndex(value):
+                        streams.append(stream(value, None, None))
 
-        if 'tcp.stream' in prefix:
-            if 'tcp:tls' in cur_frame_protocols:
-                cur_tcp_stream = value
-                if not findIndex(value):
-                    streams.append(stream(value, None, None))
+            if 'tls.handshake.extensions_server_name' in prefix:
+                if 'tcp:tls' in cur_frame_protocols:
+                    if not value.isdigit():
+                        insertSNI(cur_tcp_stream, value)
 
-        if 'tls.handshake.extensions_server_name' in prefix:
-            if 'tcp:tls' in cur_frame_protocols:
-                if not value.isdigit():
-                    insertSNI(cur_tcp_stream, value)
+            if 'tcp.payload' in prefix:
+                if 'tcp:tls' in cur_frame_protocols:
+                    length = str(value).count(':') + 1
+                    appendLength(cur_tcp_stream, str(length))
 
-        if 'tcp.payload' in prefix:
-            if 'tcp:tls' in cur_frame_protocols:
-                length = str(value).count(':') + 1
-                appendLength(cur_tcp_stream, str(length))
+        max_packetlen = 30
+        for stream in streams:
+            count = str(stream.tcp_length).count(',') + 1
+            if count < max_packetlen:
+                for i in range(max_packetlen - count):
+                    appendLength(stream.tcp_stream, '0')
+            elif count > max_packetlen:
+                removeLength(stream.tcp_stream, stream.tcp_length, max_packetlen)
 
-    max_packetlen = 30
-    for stream in streams:
-        count = str(stream.tcp_length).count(',') + 1
-        if count < max_packetlen:
-            for i in range(max_packetlen - count):
-                appendLength(stream.tcp_stream, '0')
-        elif count > max_packetlen:
-            removeLength(stream.tcp_stream, stream.tcp_length, max_packetlen)
-
-with open('dataset.csv', 'a', encoding='utf-8', newline='') as csv_file:
-    for stream in streams:
-        if stream.sni is None:
-            stream.sni = ''
-        csv_file.write(dictionary[target] + ',' + pcap_file_path + ',' + stream.tcp_stream + ',' + stream.sni + ',' + stream.tcp_length + '\n')
+    with open('dataset.csv', 'a', encoding='utf-8', newline='') as csv_file:
+        for stream in streams:
+            if stream.sni is None:
+                stream.sni = ''
+            csv_file.write(dictionary[target] + ',' + pcap_file_path + ',' + stream.tcp_stream + ',' + stream.sni + ',' + stream.tcp_length + '\n')
