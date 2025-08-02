@@ -67,7 +67,7 @@ def removeLength(cur_tcp_stream, input_string, max_packetlen):
             stream.tcp_length = input_string[:index]
 
 
-if __name__ == "__main__":
+def main():
     # 读取JSON数据文件
     with open(json_file_path, "rb") as f:
         # 使用ijson.parse方法解析JSON数据
@@ -123,3 +123,7 @@ if __name__ == "__main__":
                 + stream.tcp_length
                 + "\n"
             )
+
+
+if __name__ == "__main__":
+    main()
