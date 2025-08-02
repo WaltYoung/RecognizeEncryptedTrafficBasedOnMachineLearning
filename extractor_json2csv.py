@@ -35,18 +35,14 @@ class Stream:
     tcp_length: Optional[Any]
 
 
-# 创建类的实例数组
-streams = []
-
-
-def insertSNI(cur_tcp_stream, value):
+def insertSNI(streams, cur_tcp_stream, value):
     for stream in streams:
         if stream.tcp_stream == cur_tcp_stream:
             if stream.sni is None:
                 stream.sni = value
 
 
-def appendLength(cur_tcp_stream, value):
+def appendLength(streams, cur_tcp_stream, value):
     for stream in streams:
         if stream.tcp_stream == cur_tcp_stream:
             if stream.tcp_length is None:
@@ -55,7 +51,7 @@ def appendLength(cur_tcp_stream, value):
                 stream.tcp_length += "," + value
 
 
-def removeLength(cur_tcp_stream, input_string, max_packetlen):
+def removeLength(streams, cur_tcp_stream, input_string, max_packetlen):
     for stream in streams:
         if stream.tcp_stream == cur_tcp_stream:
             comma_count = 0
@@ -70,6 +66,9 @@ def removeLength(cur_tcp_stream, input_string, max_packetlen):
 
 
 def main():
+    # 创建类的实例数组
+    streams: list[Stream] = []
+
     # 读取JSON数据文件
     with open(json_file_path, "rb") as f:
         # 使用ijson.parse方法解析JSON数据
@@ -94,20 +93,22 @@ def main():
             if "tls.handshake.extensions_server_name" in prefix:
                 if "tcp:tls" in cur_frame_protocols:
                     if not value.isdigit():
-                        insertSNI(cur_tcp_stream, value)
+                        insertSNI(streams, cur_tcp_stream, value)
 
             if "tcp.payload" in prefix:
                 if "tcp:tls" in cur_frame_protocols:
                     length = str(value).count(":") + 1
-                    appendLength(cur_tcp_stream, str(length))
+                    appendLength(streams, cur_tcp_stream, str(length))
 
         for stream in streams:
             count = str(stream.tcp_length).count(",") + 1
             if count < MAX_PACKETLEN:
                 for _ in range(MAX_PACKETLEN - count):
-                    appendLength(stream.tcp_stream, "0")
+                    appendLength(streams, stream.tcp_stream, "0")
             elif count > MAX_PACKETLEN:
-                removeLength(stream.tcp_stream, stream.tcp_length, MAX_PACKETLEN)
+                removeLength(
+                    streams, stream.tcp_stream, stream.tcp_length, MAX_PACKETLEN
+                )
 
     with open("dataset.csv", "a", encoding="utf-8", newline="") as csv_file:
         for stream in streams:
