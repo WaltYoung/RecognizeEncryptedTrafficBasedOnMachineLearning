@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 __author__ = "Xiao"
+from collections import OrderedDict
 import csv
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Final, Iterable, Optional
 import ijson
 
@@ -31,45 +32,13 @@ json_file_path: Final[str] = f"{target}.json"
 @dataclass
 class Stream:
     tcp_stream: str
-    sni: Optional[str]
-    tcp_length: Optional[str]
-
-
-def insertSNI(streams: Iterable[Stream], cur_tcp_stream, value) -> None:
-    for stream in streams:
-        if stream.tcp_stream == cur_tcp_stream:
-            if stream.sni is None:
-                stream.sni = value
-
-
-def appendLength(streams: Iterable[Stream], cur_tcp_stream, value) -> None:
-    for stream in streams:
-        if stream.tcp_stream == cur_tcp_stream:
-            if stream.tcp_length is None:
-                stream.tcp_length = value
-            else:
-                stream.tcp_length += "," + value
-
-
-def removeLength(
-    streams: Iterable[Stream], cur_tcp_stream, input_string, max_packetlen
-) -> None:
-    for stream in streams:
-        if stream.tcp_stream == cur_tcp_stream:
-            comma_count = 0
-            index = 0
-            for i, char in enumerate(input_string):
-                if char == ",":
-                    comma_count += 1
-                    if comma_count == max_packetlen:
-                        index = i
-                        break
-            stream.tcp_length = input_string[:index]
+    sni: Optional[str] = None
+    tcp_length: list[int] = field(default_factory=list)
 
 
 def main():
     # 创建类的实例数组
-    streams: list[Stream] = []
+    streams: OrderedDict[str, Stream] = OrderedDict()
 
     # 读取JSON数据文件
     with open(json_file_path, "rb") as f:
@@ -87,30 +56,25 @@ def main():
             if "tcp.stream" in prefix:
                 if "tcp:tls" in cur_frame_protocols:
                     cur_tcp_stream = value
-                    if all(
-                        stream.tcp_stream != value for stream in streams
-                    ):  # 检查是否存在以value为key的stream
-                        streams.append(Stream(value, None, None))
+                    streams.setdefault(value, Stream(value))
 
             if "tls.handshake.extensions_server_name" in prefix:
                 if "tcp:tls" in cur_frame_protocols:
                     if not value.isdigit():
-                        insertSNI(streams, cur_tcp_stream, value)
+                        if cur_tcp_stream in streams:
+                            if streams[cur_tcp_stream].sni is None:
+                                streams[cur_tcp_stream].sni = value
 
             if "tcp.payload" in prefix:
                 if "tcp:tls" in cur_frame_protocols:
                     length = value.count(":") + 1
-                    appendLength(streams, cur_tcp_stream, str(length))
+                    if cur_tcp_stream in streams:
+                        streams[cur_tcp_stream].tcp_length.append(length)
 
-        for stream in streams:
-            count = str(stream.tcp_length).count(",") + 1
-            if count < MAX_PACKETLEN:
-                for _ in range(MAX_PACKETLEN - count):
-                    appendLength(streams, stream.tcp_stream, "0")
-            elif count > MAX_PACKETLEN:
-                removeLength(
-                    streams, stream.tcp_stream, stream.tcp_length, MAX_PACKETLEN
-                )
+        for stream in streams.values():
+            stream.tcp_length = (stream.tcp_length + [0] * MAX_PACKETLEN)[
+                :MAX_PACKETLEN
+            ]
 
     with open("dataset.csv", "a", encoding="utf-8", newline="") as csv_file:
         writer = csv.writer(csv_file)
@@ -121,9 +85,9 @@ def main():
                     pcap_file_path,
                     stream.tcp_stream,
                     stream.sni if stream.sni is not None else "",
-                    stream.tcp_length,
+                    *stream.tcp_length,
                 )
-                for stream in streams
+                for stream in streams.values()
             )
         )
 
