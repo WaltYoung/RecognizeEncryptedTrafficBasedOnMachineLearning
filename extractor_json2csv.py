@@ -46,7 +46,7 @@ def main():
         data: Iterable[tuple[Iterable[str] | str, Any, str]] = ijson.parse(f)
 
         # 遍历解析出的数据
-        cur_tcp_stream: str = "0"
+        cur_stream: Optional[Stream] = None
         cur_frame_protocols: str = ""
         for prefix, _, value in data:
             # 检查特定字段的前缀并提取数据
@@ -54,25 +54,24 @@ def main():
                 cur_frame_protocols = value
 
             if "tcp.stream" in prefix and "tcp:tls" in cur_frame_protocols:
-                cur_tcp_stream = value
-                streams.setdefault(value, Stream(value))
+                cur_stream = streams.setdefault(value, Stream(value))
 
             if (
                 "tls.handshake.extensions_server_name" in prefix
                 and "tcp:tls" in cur_frame_protocols
-                and not value.isdigit()
-                and cur_tcp_stream in streams
-                and streams[cur_tcp_stream].sni is None
+                and not str(value).isdigit()
+                and cur_stream is not None
+                and cur_stream.sni is None
             ):
-                streams[cur_tcp_stream].sni = value
+                cur_stream.sni = value
 
             if (
                 "tcp.payload" in prefix
                 and "tcp:tls" in cur_frame_protocols
-                and cur_tcp_stream in streams
+                and cur_stream is not None
             ):
                 length = value.count(":") + 1
-                streams[cur_tcp_stream].tcp_length.append(length)
+                cur_stream.tcp_length.append(length)
 
         for stream in streams.values():
             stream.tcp_length = (stream.tcp_length + [0] * MAX_PACKETLEN)[
