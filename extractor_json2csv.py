@@ -3,11 +3,12 @@
 
 __author__ = "Xiao"
 
+from typing import Final
 import ijson
 
 MAX_PACKETLEN = 30
 
-dictionary = {
+websites_mapper: Final[dict[str, str]] = {
     "52pojie": "www.52pojie.cn",
     "cnki": "www.cnki.net",
     "wzu": "www.wzu.edu.cn",
@@ -21,9 +22,9 @@ dictionary = {
     "wujiebantu": "www.wujiebantu.com",
 }
 
-target = "52pojie"  # 运行前请修改目标文件名
-pcap_file_path = target + ".pcap"
-json_file_path = target + ".json"
+target: Final[str] = "52pojie"  # 运行前请修改目标文件名
+pcap_file_path: Final[str] = f"{target}.pcap"
+json_file_path: Final[str] = f"{target}.json"
 
 
 class Stream:
@@ -112,7 +113,7 @@ def main():
             if stream.sni is None:
                 stream.sni = ""
             csv_file.write(
-                dictionary[target]
+                websites_mapper[target]
                 + ","
                 + pcap_file_path
                 + ","
