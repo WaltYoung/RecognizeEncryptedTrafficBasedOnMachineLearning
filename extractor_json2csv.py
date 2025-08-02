@@ -3,7 +3,8 @@
 
 __author__ = "Xiao"
 
-from typing import Final
+from dataclasses import dataclass
+from typing import Any, Final, Optional
 import ijson
 
 MAX_PACKETLEN = 30
@@ -27,11 +28,11 @@ pcap_file_path: Final[str] = f"{target}.pcap"
 json_file_path: Final[str] = f"{target}.json"
 
 
+@dataclass
 class Stream:
-    def __init__(self, tcp_stream, sni, length):
-        self.tcp_stream = tcp_stream
-        self.sni = sni
-        self.tcp_length = length
+    tcp_stream: Any
+    sni: Optional[Any]
+    tcp_length: Optional[Any]
 
 
 # 创建类的实例数组
@@ -77,7 +78,7 @@ def main():
         # 遍历解析出的数据
         cur_tcp_stream = "0"
         cur_frame_protocols = ""
-        for prefix, event, value in data:
+        for prefix, _, value in data:
             # 检查特定字段的前缀并提取数据
             if "frame.protocols" in prefix:
                 cur_frame_protocols = value
@@ -103,7 +104,7 @@ def main():
         for stream in streams:
             count = str(stream.tcp_length).count(",") + 1
             if count < MAX_PACKETLEN:
-                for i in range(MAX_PACKETLEN - count):
+                for _ in range(MAX_PACKETLEN - count):
                     appendLength(stream.tcp_stream, "0")
             elif count > MAX_PACKETLEN:
                 removeLength(stream.tcp_stream, stream.tcp_length, MAX_PACKETLEN)
