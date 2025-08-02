@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 
 __author__ = "Xiao"
-
 from dataclasses import dataclass
-from typing import Any, Final, Optional
+from typing import Any, Final, Iterable, Optional
 import ijson
 
 MAX_PACKETLEN = 30
@@ -30,19 +29,19 @@ json_file_path: Final[str] = f"{target}.json"
 
 @dataclass
 class Stream:
-    tcp_stream: Any
-    sni: Optional[Any]
-    tcp_length: Optional[Any]
+    tcp_stream: str
+    sni: Optional[str]
+    tcp_length: Optional[str]
 
 
-def insertSNI(streams, cur_tcp_stream, value):
+def insertSNI(streams: Iterable[Stream], cur_tcp_stream, value) -> None:
     for stream in streams:
         if stream.tcp_stream == cur_tcp_stream:
             if stream.sni is None:
                 stream.sni = value
 
 
-def appendLength(streams, cur_tcp_stream, value):
+def appendLength(streams: Iterable[Stream], cur_tcp_stream, value) -> None:
     for stream in streams:
         if stream.tcp_stream == cur_tcp_stream:
             if stream.tcp_length is None:
@@ -51,7 +50,9 @@ def appendLength(streams, cur_tcp_stream, value):
                 stream.tcp_length += "," + value
 
 
-def removeLength(streams, cur_tcp_stream, input_string, max_packetlen):
+def removeLength(
+    streams: Iterable[Stream], cur_tcp_stream, input_string, max_packetlen
+) -> None:
     for stream in streams:
         if stream.tcp_stream == cur_tcp_stream:
             comma_count = 0
@@ -72,11 +73,11 @@ def main():
     # 读取JSON数据文件
     with open(json_file_path, "rb") as f:
         # 使用ijson.parse方法解析JSON数据
-        data = ijson.parse(f)
+        data: Iterable[tuple[Iterable[str] | str, Any, str]] = ijson.parse(f)
 
         # 遍历解析出的数据
-        cur_tcp_stream = "0"
-        cur_frame_protocols = ""
+        cur_tcp_stream: str = "0"
+        cur_frame_protocols: str = ""
         for prefix, _, value in data:
             # 检查特定字段的前缀并提取数据
             if "frame.protocols" in prefix:
@@ -97,7 +98,7 @@ def main():
 
             if "tcp.payload" in prefix:
                 if "tcp:tls" in cur_frame_protocols:
-                    length = str(value).count(":") + 1
+                    length = value.count(":") + 1
                     appendLength(streams, cur_tcp_stream, str(length))
 
         for stream in streams:
@@ -115,16 +116,7 @@ def main():
             if stream.sni is None:
                 stream.sni = ""
             csv_file.write(
-                websites_mapper[target]
-                + ","
-                + pcap_file_path
-                + ","
-                + stream.tcp_stream
-                + ","
-                + stream.sni
-                + ","
-                + stream.tcp_length
-                + "\n"
+                f"{websites_mapper[target]},{pcap_file_path},{stream.tcp_stream},{stream.sni},{stream.tcp_length}\n"
             )
 
 
