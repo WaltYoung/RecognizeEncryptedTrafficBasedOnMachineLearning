@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __author__ = "Xiao"
+import csv
 from dataclasses import dataclass
 from typing import Any, Final, Iterable, Optional
 import ijson
@@ -112,12 +113,19 @@ def main():
                 )
 
     with open("dataset.csv", "a", encoding="utf-8", newline="") as csv_file:
-        for stream in streams:
-            if stream.sni is None:
-                stream.sni = ""
-            csv_file.write(
-                f"{websites_mapper[target]},{pcap_file_path},{stream.tcp_stream},{stream.sni},{stream.tcp_length}\n"
+        writer = csv.writer(csv_file)
+        writer.writerows(
+            (
+                (
+                    websites_mapper[target],
+                    pcap_file_path,
+                    stream.tcp_stream,
+                    stream.sni if stream.sni is not None else "",
+                    stream.tcp_length,
+                )
+                for stream in streams
             )
+        )
 
 
 if __name__ == "__main__":
