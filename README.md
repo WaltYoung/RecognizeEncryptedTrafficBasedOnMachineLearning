@@ -65,7 +65,7 @@ pycharm首次打开本项目，将自动下载依赖项，如没有，请在终�
 本程序由2个python文件`extractor_pcap2json.py`和`extractor_ json 2csv.py`组成。
 
 1. `extractor_pcap2json.py`利用tshark组件对流量进行分析，将流量文件转换为JSON文件，方便解析读取。
-2. `extractor_ json 2csv.py`利用ijson库逐行读入大型json文件以避免内存不够的问题。
+2. `extractor_json2csv.py`利用ijson库逐行读入大型json文件以避免内存不够的问题。
 
 
 ### 运行步骤
