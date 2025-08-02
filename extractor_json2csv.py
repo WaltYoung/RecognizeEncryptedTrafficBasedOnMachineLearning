@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Final, Iterable, Optional
 import ijson
 
-MAX_PACKETLEN = 30
+MAX_PACKETLEN: Final[int] = 30
 
 websites_mapper: Final[dict[str, str]] = {
     "52pojie": "www.52pojie.cn",
@@ -53,23 +53,26 @@ def main():
             if "frame.protocols" in prefix:
                 cur_frame_protocols = value
 
-            if "tcp.stream" in prefix:
-                if "tcp:tls" in cur_frame_protocols:
-                    cur_tcp_stream = value
-                    streams.setdefault(value, Stream(value))
+            if "tcp.stream" in prefix and "tcp:tls" in cur_frame_protocols:
+                cur_tcp_stream = value
+                streams.setdefault(value, Stream(value))
 
-            if "tls.handshake.extensions_server_name" in prefix:
-                if "tcp:tls" in cur_frame_protocols:
-                    if not value.isdigit():
-                        if cur_tcp_stream in streams:
-                            if streams[cur_tcp_stream].sni is None:
-                                streams[cur_tcp_stream].sni = value
+            if (
+                "tls.handshake.extensions_server_name" in prefix
+                and "tcp:tls" in cur_frame_protocols
+                and not value.isdigit()
+                and cur_tcp_stream in streams
+                and streams[cur_tcp_stream].sni is None
+            ):
+                streams[cur_tcp_stream].sni = value
 
-            if "tcp.payload" in prefix:
-                if "tcp:tls" in cur_frame_protocols:
-                    length = value.count(":") + 1
-                    if cur_tcp_stream in streams:
-                        streams[cur_tcp_stream].tcp_length.append(length)
+            if (
+                "tcp.payload" in prefix
+                and "tcp:tls" in cur_frame_protocols
+                and cur_tcp_stream in streams
+            ):
+                length = value.count(":") + 1
+                streams[cur_tcp_stream].tcp_length.append(length)
 
         for stream in streams.values():
             stream.tcp_length = (stream.tcp_length + [0] * MAX_PACKETLEN)[
