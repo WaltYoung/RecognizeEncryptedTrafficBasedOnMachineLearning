@@ -62,10 +62,10 @@ pycharm首次打开本项目，将自动下载依赖项，如没有，请在终�
 
 本程序使用`ijson`库进行json文件解析和处理，能够从pcap文件中提取网络流特征，用于加密流量行为识别。
 
-本程序由2个python文件`extractor_pcap2json.py`和`extractor_ json 2csv.py`组成。
+本程序由2个python文件`extractor_pcap2json.py`和`extractor_ json2csv.py`组成。
 
 1. `extractor_pcap2json.py`利用tshark组件对流量进行分析，将流量文件转换为JSON文件，方便解析读取。
-2. `extractor_ json 2csv.py`利用ijson库逐行读入大型json文件以避免内存不够的问题。
+2. `extractor_json2csv.py`利用ijson库逐行读入大型json文件以避免内存不够的问题。
 
 
 ### 运行步骤
@@ -73,7 +73,7 @@ pycharm首次打开本项目，将自动下载依赖项，如没有，请在终�
 1. 修改目标文件名
 2. 运行`extractor_pcap2json.py`，将在当前目录下得到与流量文件同名的json文件。**请等待json文件大小不再改变**，文件大小不再改变时表明子进程结束
 3. 修改目标文件名和文件对应的域名，将目标文件名修改为第二步得到的流量文件名，并在字典中补充流量文件名对应的域名。
-4. 运行`extractor_pcap2json.py`，将在当前目录下得到名为`dataset.csv`文件
+4. 运行`extractor_json2csv.py`，将在当前目录下得到名为`dataset.csv`文件
 5. 如有需要，可在修改目标文件名和文件对应的域名后多次执行1-4步以得到汇总的数据集
 6. `dataset.csv`文件字段顺序：域名，流量文件的文件名，流号，SNI字段，包长1，包长2，包长3，…，包长30
 
